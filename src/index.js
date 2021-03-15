@@ -1,33 +1,51 @@
 import React, { Component } from 'react';
 import { render } from 'react-dom';
-import axios from 'axios';
+import { Provider, connect } from 'react-redux';
+import store, { loadUsers, loadThings, setView, createUser } from './store';
+import Nav from './Nav';
+import Users from './Users';
+import Things from './Things';
 
-class App extends Component {
-  constructor() {
-    super();
-    this.state = { users: [], loading: true };
+const App = connect(
+  (state) => {
+    return state;
+  },
+  (dispatch) => {
+    return {
+      bootstrap: async () => {
+        dispatch(loadUsers());
+        dispatch(loadThings());
+      },
+      setView: function (view) {
+        dispatch(setView(view));
+      },
+    };
   }
-
-  async componentDidMount() {
-    this.setState({
-      users: (await axios.get('/api/users')).data,
-      loading: false,
-    });
-  }
-  //test
-  render() {
-    const { users, loading } = this.state;
-    if (loading) {
-      return '....loading';
+)(
+  class App extends Component {
+    componentDidMount() {
+      this.props.bootstrap();
+      window.addEventListener('hashchange', () => {
+        this.props.setView(window.location.hash.slice(1));
+      });
     }
-    return (
-      <ul>
-        {users.map((user) => {
-          return <li key={user.id}>{user.name}</li>;
-        })}
-      </ul>
-    );
+    render() {
+      const { users, view } = this.props;
+      return (
+        <div>
+          {view}
+          <Nav />
+          {view === 'users' && <Users />}
+          {view === 'things' && <Things />}
+        </div>
+      );
+    }
   }
-}
+);
 
-render(<App />, document.querySelector('#root'));
+render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  document.querySelector('#root')
+);
